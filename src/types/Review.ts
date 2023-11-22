@@ -28,6 +28,7 @@ interface IReview extends Document {
     ref: "Product";
     required: true;
   };
+  calculateAverageRating: (productId: mongoose.Types.ObjectId) => Promise<void>;
   timestamps: Boolean;
 }
 

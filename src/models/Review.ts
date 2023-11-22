@@ -67,7 +67,7 @@ ReviewSchema.statics.calculateAverageRating = async function (productId) {
 };
 
 ReviewSchema.statics.calculateAverageRating = async function (
-  this: Model<IReview>,
+  this: Model<IReview, ReviewModel>,
   productId: mongoose.Types.ObjectId
 ) {
   const result = await this.aggregate([
@@ -82,7 +82,7 @@ ReviewSchema.statics.calculateAverageRating = async function (
   ]);
 
   try {
-    await this.model("Product").findOneAndUpdate(
+    await mongoose.model("Product").findOneAndUpdate(
       { _id: productId },
       {
         averageRating: Math.ceil(result[0]?.averageRating || 0),
@@ -94,16 +94,13 @@ ReviewSchema.statics.calculateAverageRating = async function (
   }
 };
 
-ReviewSchema.post("save", async function (this: Review) {
-  await this.constructor.calculateAverageRating(this.product);
-});
+// ReviewSchema.post<IReview>("save", async function (this: IReview) {
+//   await this.constructor.calculateAverageRating(this.product);
+// });
 
-ReviewSchema.post("remove", async function (this: Review) {
-  await this.constructor.calculateAverageRating(this.product);
-});
+// ReviewSchema.post<IReview>(/^remove$/, async function (this: IReview) {
+//   await this.constructor.calculateAverageRating(this.product);
+// });
 
-const ReviewModel = mongoose.model<IReview, ReviewModel>(
-  "Review",
-  ReviewSchema
-);
+const Review = mongoose.model<IReview, ReviewModel>("Review", ReviewSchema);
 export default Review;

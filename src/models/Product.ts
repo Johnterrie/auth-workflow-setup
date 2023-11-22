@@ -1,52 +1,97 @@
-import mongoose, { Schema, Document } from "mongoose";
-import validator from "validator";
-import bcrypt from "bcryptjs";
-import IUser from "../types/User";
-import { Model } from "mongoose";
+import mongoose, { Schema } from "mongoose";
+import { NextFunction } from "express";
+import IProducts from "../types/Product";
+import { CallbackError } from "../types/CallbackError";
 
-const UserSchema: Schema<IUser> = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "Please provide name"],
-    minlength: 3,
-    maxlength: 20,
-    trim: true,
-  },
-  email: {
-    type: String,
-    required: [true, "Please provide email"],
-    validate: {
-      validator: validator.isEmail,
-      message: "Please provide valid email",
+const ProductSchema: Schema<IProducts> = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      trim: true,
+      required: [true, "Please provide product name"],
+      maxlength: [100, "Name can not be more than 100 characters"],
     },
-    unique: true,
+    price: {
+      type: Number,
+      required: [true, "Please provide product price"],
+      default: 0,
+    },
+    description: {
+      type: String,
+      required: [true, "Please provide product description"],
+      maxlength: [1000, "Description can not be more than 1000 characters"],
+    },
+    image: {
+      type: String,
+      default: "/uploads/example.jpeg",
+    },
+    category: {
+      type: String,
+      required: [true, "Please provide product category"],
+      enum: ["office", "kitchen", "bedroom"],
+    },
+    company: {
+      type: String,
+      required: [true, "Please provide company"],
+      enum: {
+        values: ["ikea", "liddy", "marcos"],
+        message: "{VALUE} is not supported",
+      },
+    },
+    colors: {
+      type: [String],
+      default: ["#222"],
+      required: true,
+    },
+    featured: {
+      type: Boolean,
+      default: false,
+    },
+    freeShipping: {
+      type: Boolean,
+      default: false,
+    },
+    inventory: {
+      type: Number,
+      required: true,
+      default: 15,
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+    },
+    numOfReviews: {
+      type: Number,
+      default: 0,
+    },
+    user: {
+      type: mongoose.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
-  password: {
-    type: String,
-    required: [true, "Please provide password"],
-    minlength: 6,
-  },
-  role: {
-    type: String,
-    enum: ["admin", "user"],
-    default: "user",
-  },
-  verificationToken: String,
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+);
 
-  isVerified: {
-    type: Boolean,
-    default: false,
-  },
-
-  verified: Date,
-
-  passwordToken: {
-    type: String,
-  },
-
-  passwordTokenExpirationDate: {
-    type: Date,
-  },
+ProductSchema.virtual("reviews", {
+  ref: "Review",
+  localField: "_id",
+  foreignField: "product",
+  justOne: false,
 });
 
-const User = mongoose.model<IUser>("User", UserSchema);
+ProductSchema.pre(
+  /^remove$/,
+  { document: true, query: false },
+  async function (
+    this: IProducts,
+    next: (err?: CallbackError | undefined) => void
+  ) {
+    await this.model("Review").deleteMany({ product: this._id });
+    next();
+  }
+);
+
+const Product = mongoose.model<IProducts>("Product", ProductSchema);
+
+export default Product;
